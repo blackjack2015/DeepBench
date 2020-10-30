@@ -134,30 +134,17 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
 
 #if (__CUDACC_VER_MAJOR__ < 8)
     // Warm up
-    if (std::is_same<T1, double>::value) 
-        stat = cublasDgemm(cublas_handle,
-                a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                m,
-                n,
-                k,
-                &alpha,
-                A.begin(), A.dims()[0],
-                B.begin(), B.dims()[0],
-                &beta,
-                C.begin(), C.dims()[0]);
-    else
-        stat = cublasSgemm(cublas_handle,
-                a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                m,
-                n,
-                k,
-                &alpha,
-                A.begin(), A.dims()[0],
-                B.begin(), B.dims()[0],
-                &beta,
-                C.begin(), C.dims()[0]);
+    stat = cublasSgemm(cublas_handle,
+            a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+            b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+            m,
+            n,
+            k,
+            &alpha,
+            A.begin(), A.dims()[0],
+            B.begin(), B.dims()[0],
+            &beta,
+            C.begin(), C.dims()[0]);
 #else
     if (std::is_same<T1, double>::value) 
         stat = cublasDgemm(cublas_handle,
@@ -197,19 +184,6 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
     for (int i = 0; i < numRepeats; ++i) {
 
 #if (__CUDACC_VER_MAJOR__ < 8)
-    if (std::is_same<T1, double>::value) 
-        stat = cublasDgemm(cublas_handle,
-                a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                m,
-                n,
-                k,
-                &alpha,
-                A.begin(), A.dims()[0],
-                B.begin(), B.dims()[0],
-                &beta,
-                C.begin(), C.dims()[0]);
-    else
         stat = cublasSgemm(cublas_handle,
                 a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
                 b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
@@ -222,18 +196,18 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
                 &beta,
                 C.begin(), C.dims()[0]);
 #else
-    if (std::is_same<T1, double>::value) 
-        stat = cublasDgemm(cublas_handle,
-                a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                m,
-                n,
-                k,
-                &alpha_d,
-                (double*)A.begin(), A.dims()[0],
-                (double*)B.begin(), B.dims()[0],
-                &beta_d,
-                (double*)C.begin(), C.dims()[0]);
+        if (std::is_same<T1, double>::value) 
+            stat = cublasDgemm(cublas_handle,
+                    a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                    b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                    m,
+                    n,
+                    k,
+                    &alpha_d,
+                    (double*)A.begin(), A.dims()[0],
+                    (double*)B.begin(), B.dims()[0],
+                    &beta_d,
+                    (double*)C.begin(), C.dims()[0]);
         stat = cublasGemmEx(cublas_handle,
                     a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
                     b_t ? CUBLAS_OP_T : CUBLAS_OP_N,

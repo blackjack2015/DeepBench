@@ -66,6 +66,8 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
 #if (__CUDACC_VER_MAJOR__ >= 8)
     const int alpha = 1.f;
     const int beta  = 1.f;
+    const double alpha_d = 1.f;
+    const double beta_d = 1.f;
 #else
     const float alpha = 1.f / static_cast<float>(A.dims()[1]);
     const float beta  = 1.f;
@@ -82,28 +84,44 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
     cudaDataType_t A_type = CUDA_R_32F;
     cudaDataType_t B_type = CUDA_R_32F;
     cudaDataType_t C_type = CUDA_R_32F;
+#if (__CUDACC_VER_MAJOR__ >= 11)
+    cublasComputeType_t compute_type = CUBLAS_COMPUTE_32F;
+#else
     cudaDataType_t compute_type = CUDA_R_32F;
+#endif
     cublasGemmAlgo_t algo;
 
     if (std::is_same<T1, double>::value) {
         A_type = CUDA_R_64F;
         B_type = CUDA_R_64F;
         C_type = CUDA_R_64F;
+#if (__CUDACC_VER_MAJOR__ >= 11)
+	compute_type = CUBLAS_COMPUTE_64F;
+#else
         compute_type = CUDA_R_64F;
+#endif
     }
 
     if (std::is_same<T1, uint16_t>::value) {
         A_type = CUDA_R_16F;
         B_type = CUDA_R_16F;
         C_type = CUDA_R_16F;
+#if (__CUDACC_VER_MAJOR__ >= 11)
+	compute_type = CUBLAS_COMPUTE_16F;
+#else
         compute_type = CUDA_R_16F;
+#endif
     }
 
     if (std::is_same<T1, uint8_t>::value) {
         A_type = CUDA_R_8I;
         B_type = CUDA_R_8I;
         C_type = CUDA_R_32I;
+#if (__CUDACC_VER_MAJOR__ >= 11)
+	compute_type = CUBLAS_COMPUTE_32I;
+#else
         compute_type = CUDA_R_32I;
+#endif
     }
 
 #if (USE_TENSOR_CORES)
@@ -141,6 +159,18 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
                 &beta,
                 C.begin(), C.dims()[0]);
 #else
+    if (std::is_same<T1, double>::value) 
+        stat = cublasDgemm(cublas_handle,
+                a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                m,
+                n,
+                k,
+                &alpha_d,
+                (double*)A.begin(), A.dims()[0],
+                (double*)B.begin(), B.dims()[0],
+                &beta_d,
+                (double*)C.begin(), C.dims()[0]);
     stat = cublasGemmEx(cublas_handle,
                 a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
                 b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
@@ -192,6 +222,18 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
                 &beta,
                 C.begin(), C.dims()[0]);
 #else
+    if (std::is_same<T1, double>::value) 
+        stat = cublasDgemm(cublas_handle,
+                a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                m,
+                n,
+                k,
+                &alpha_d,
+                (double*)A.begin(), A.dims()[0],
+                (double*)B.begin(), B.dims()[0],
+                &beta_d,
+                (double*)C.begin(), C.dims()[0]);
         stat = cublasGemmEx(cublas_handle,
                     a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
                     b_t ? CUBLAS_OP_T : CUBLAS_OP_N,

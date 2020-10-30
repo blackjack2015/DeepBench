@@ -65,7 +65,15 @@ rand(std::vector<int> dims, curandGenerator_t curand_gen) {
 }
 
 template <typename T>
-typename std::enable_if<!(std::is_same<T, float>::value), Tensor<T>>::type
+typename std::enable_if<(std::is_same<T, double>::value), Tensor<T>>::type
+rand(std::vector<int> dims, curandGenerator_t curand_gen) {
+    Tensor<T> tensor(dims);
+    curandGenerateUniformDouble(curand_gen, tensor.begin(), tensor.size());
+    return tensor;
+}
+
+template <typename T>
+typename std::enable_if<!(std::is_same<T, float>::value) && !(std::is_same<T, double>::value), Tensor<T>>::type
 rand(std::vector<int> dims, curandGenerator_t curand_gen) {
 
     Tensor<T> tensor(dims);

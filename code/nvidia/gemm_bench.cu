@@ -85,6 +85,13 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
     cudaDataType_t compute_type = CUDA_R_32F;
     cublasGemmAlgo_t algo;
 
+    if (std::is_same<T1, double>::value) {
+        A_type = CUDA_R_64F;
+        B_type = CUDA_R_64F;
+        C_type = CUDA_R_64F;
+        compute_type = CUDA_R_64F;
+    }
+
     if (std::is_same<T1, uint16_t>::value) {
         A_type = CUDA_R_16F;
         B_type = CUDA_R_16F;
@@ -109,7 +116,20 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
 
 #if (__CUDACC_VER_MAJOR__ < 8)
     // Warm up
-    stat = cublasSgemm(cublas_handle,
+    if (std::is_same<T1, double>::value) 
+        stat = cublasDgemm(cublas_handle,
+                a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                m,
+                n,
+                k,
+                &alpha,
+                A.begin(), A.dims()[0],
+                B.begin(), B.dims()[0],
+                &beta,
+                C.begin(), C.dims()[0]);
+    else
+        stat = cublasSgemm(cublas_handle,
                 a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
                 b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
                 m,
@@ -147,17 +167,30 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
     for (int i = 0; i < numRepeats; ++i) {
 
 #if (__CUDACC_VER_MAJOR__ < 8)
+    if (std::is_same<T1, double>::value) 
+        stat = cublasDgemm(cublas_handle,
+                a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                m,
+                n,
+                k,
+                &alpha,
+                A.begin(), A.dims()[0],
+                B.begin(), B.dims()[0],
+                &beta,
+                C.begin(), C.dims()[0]);
+    else
         stat = cublasSgemm(cublas_handle,
-                    a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                    b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                    m,
-                    n,
-                    k,
-                    &alpha,
-                    A.begin(), A.dims()[0],
-                    B.begin(), B.dims()[0],
-                    &beta,
-                    C.begin(), C.dims()[0]);
+                a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                m,
+                n,
+                k,
+                &alpha,
+                A.begin(), A.dims()[0],
+                B.begin(), B.dims()[0],
+                &beta,
+                C.begin(), C.dims()[0]);
 #else
         stat = cublasGemmEx(cublas_handle,
                     a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
@@ -247,7 +280,14 @@ int main(int argc, char **argv) {
 
     int pad_kernels_count = 0;
 
-    for (const auto &problem : (inference ? inference_server_set : training_set)) {
+    std::vector<std::tuple<int, int, int, bool, bool>> prob_set;
+    for (int i = 1 ; i <= 8192 / 128; i++){
+	int m = i*128, n = i*128, k = i*128;
+	prob_set.push_back(std::make_tuple(m, n, k, false, false));
+    }
+
+    //for (const auto &problem : (inference ? inference_server_set : training_set)) {
+    for (const auto &problem : (inference ? prob_set : training_set)) {
         int m, n, k;
         bool a_t, b_t;
         std::tie(m, n, k, a_t, b_t) = problem;
@@ -347,6 +387,12 @@ int main(int argc, char **argv) {
             auto c = zeros<float>({m, n});
             std::cout << std::setw(13) << precision;
             time_ms = time_gemm<float, float>(a, b, c, a_t, b_t, cublas_handle);
+        } else if (precision == "double") {
+            auto a = rand<double>({a_t ? k : m, a_t ? m : k}, curand_gen);
+            auto b = rand<double>({b_t ? n : k, b_t ? k : n}, curand_gen);
+            auto c = zeros<double>({m, n});
+            std::cout << std::setw(13) << precision;
+            time_ms = time_gemm<double, double>(a, b, c, a_t, b_t, cublas_handle);
         } else {
             throw std::runtime_error(ss.str());
         }

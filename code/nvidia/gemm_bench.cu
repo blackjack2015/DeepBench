@@ -146,18 +146,6 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
             &beta,
             C.begin(), C.dims()[0]);
 #else
-    if (std::is_same<T1, double>::value) 
-        stat = cublasDgemm(cublas_handle,
-                a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                m,
-                n,
-                k,
-                &alpha_d,
-                (double*)A.begin(), A.dims()[0],
-                (double*)B.begin(), B.dims()[0],
-                &beta_d,
-                (double*)C.begin(), C.dims()[0]);
     stat = cublasGemmEx(cublas_handle,
                 a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
                 b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
@@ -196,7 +184,8 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
                 &beta,
                 C.begin(), C.dims()[0]);
 #else
-        if (std::is_same<T1, double>::value) 
+        //if (std::is_same<T1, double>::value) 
+        if (false) 
             stat = cublasDgemm(cublas_handle,
                     a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
                     b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
@@ -208,19 +197,21 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
                     (double*)B.begin(), B.dims()[0],
                     &beta_d,
                     (double*)C.begin(), C.dims()[0]);
-        stat = cublasGemmEx(cublas_handle,
-                    a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                    b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
-                    m,
-                    n,
-                    k,
-                    &alpha,
-                    A.begin(), A_type, A.dims()[0],
-                    B.begin(), B_type, B.dims()[0],
-                    &beta,
-                    C.begin(), C_type, C.dims()[0],
-                    compute_type,
-                    algo);
+	else{
+            stat = cublasGemmEx(cublas_handle,
+                        a_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                        b_t ? CUBLAS_OP_T : CUBLAS_OP_N,
+                        m,
+                        n,
+                        k,
+                        &alpha,
+                        A.begin(), A_type, A.dims()[0],
+                        B.begin(), B_type, B.dims()[0],
+                        &beta,
+                        C.begin(), C_type, C.dims()[0],
+                        compute_type,
+                        algo);
+	}
 #endif
         if (stat != CUBLAS_STATUS_SUCCESS) {
             throw std::runtime_error("sgemm failed");
@@ -237,6 +228,7 @@ int time_gemm(Tensor<T1> A, Tensor<T1> B, Tensor<T2> C, bool a_t, bool b_t, cubl
 int main(int argc, char **argv) {
     cudaFree(0);
 
+    printf("CUDACC Version: %d.\n", __CUDACC_VER_MAJOR__);
     int inference = 0;
     if (argc > 1) {
         std::string inf = "inference";
@@ -286,7 +278,7 @@ int main(int argc, char **argv) {
     std::cout << std::setw(30) << "Times" << std::endl;
     std::cout << std::setfill('-') << std::setw(88) << "-" << std::endl;
     std::cout << std::setfill(' ');
-    std::cout << "    m       n      k      a_t     b_t      precision        time (usec) ";
+    std::cout << "    m       n      k      a_t     b_t      precision        time (usec)       T(FL)OPS";
 
     if (PAD_KERNELS && precision == "int8" && inference)
         std::cout << " pad_kerenels  ";
@@ -430,6 +422,8 @@ int main(int argc, char **argv) {
             std::cout << "Not Supported";
         } else {
             std::cout << time_ms;
+	    double tops = double(m * n) / time_ms * k * 2.0 / 1e6;
+            std::cout << std::setw(16) << std::setprecision(3) << tops;
         }
 
         if (PAD_KERNELS && precision == "int8" && inference) {
